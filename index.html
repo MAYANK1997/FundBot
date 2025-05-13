@@ -12,7 +12,7 @@
 
   <script>
     async function fetchData() {
-      const res = await fetch('/.netlify/functions/express-api/data');
+      const res = await fetch('/.netlify/functions/index/data');
       const json = await res.json();
       document.getElementById('output').textContent = JSON.stringify(json, null, 2);
     }
