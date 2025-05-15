@@ -2,54 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Express + Netlify Form</title>
+  <title>Send Test Webhook</title>
 </head>
 <body>
-  <h1>Submit Your Message</h1>
+  <h1>Send Test Webhook</h1>
 
-  <form id="dataForm">
-    <input type="text" name="name" placeholder="Your Name" required />
-    <br />
-    <textarea name="message" placeholder="Your Message" required></textarea>
-    <br />
-    <button type="submit">Submit</button>
-  </form>
-
-  <h2>Submitted Messages:</h2>
-  <ul id="messagesList"></ul>
+  <button id="postDataBtn">Send Test Data</button>
 
   <script>
-    const form = document.getElementById('dataForm');
-    const list = document.getElementById('messagesList');
+    document.getElementById('postDataBtn').addEventListener('click', async () => {
+      const data = {
+        responseId: "test-123",
+        queryResult: {
+          queryText: "Check my balance",
+          action: "Check Balance",
+          parameters: {},
+          intent: {
+            name: "projects/your-project-id/agent/intents/check-balance-intent-id",
+            displayName: "Check Balance"
+          }
+        },
+        originalDetectIntentRequest: {},
+        session: "projects/your-project-id/agent/sessions/test-session"
+      };
 
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const formData = new FormData(form);
-      const data = Object.fromEntries(formData.entries());
+      try {
+        const res = await fetch('/.netlify/functions/index/webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
 
-      await fetch('/.netlify/functions/index/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(data),
-      });
-
-      form.reset();
-      loadMessages();
+        const result = await res.json();
+        alert('Response: ' + result.fulfillmentText);
+      } catch (err) {
+        console.error(err);
+        alert('Failed to send data.');
+      }
     });
-
-    async function loadMessages() {
-      const res = await fetch('/.netlify/functions/index/data');
-      const messages = await res.json();
-
-      list.innerHTML = '';
-      messages.forEach(({ name, message, timestamp }) => {
-        const item = document.createElement('li');
-        item.textContent = `${name} (${new Date(timestamp).toLocaleString()}): ${message}`;
-        list.appendChild(item);
-      });
-    }
-
-    loadMessages();
   </script>
 </body>
 </html>
