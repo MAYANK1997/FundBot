@@ -27,7 +27,7 @@
       };
 
       try {
-        const res = await fetch('/.netlify/functions/index/webhook', {
+        const res = await fetch('/.netlify/functions/index/webhook/webhook', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(data)
