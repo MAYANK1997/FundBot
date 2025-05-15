@@ -12,7 +12,7 @@
     <button type="submit">Submit</button>
   </form>
 
-  <pre id="output"></pre>
+  
 
   <script>
     const form = document.getElementById('dataForm');
@@ -24,12 +24,13 @@
         "action": "Check Balance",
         "parameters": {},
         "intent": {
-          "name": "projects/your-project-id/agent/intents/check-balance-intent-id",
+          "name": "projects/fundbot-mids/agent/intents/411e6d4d-3b18-4235-8200-1dc60545bd1e
+          ",
           "displayName": "Check Balance"
         }
       },
       "originalDetectIntentRequest": {},
-      "session": "projects/your-project-id/agent/sessions/test-session"
+      "session": "projects/fundbot-mids/agent/sessions/test-session"
     }; 
 
     form.addEventListener('submit', async (e) => {
@@ -43,9 +44,9 @@
         });
 
         const result = await response.json();
-        output.textContent = JSON.stringify(result, null, 2);
+      
       } catch (err) {
-        output.textContent = 'Error: ' + err.message;
+        console.log(err);
       }
     });
   </script>
