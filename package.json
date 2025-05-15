@@ -2,7 +2,7 @@
   "name": "fundbot-webhook",
   "version": "1.0.0",
   "description": "Webhook for Dialogflow FundBot",
-  "main": "webhook.js",
+  "main": "index.js",
   "scripts": {
     "start": "netlify dev"
   },
