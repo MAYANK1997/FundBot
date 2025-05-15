@@ -2,7 +2,7 @@ const serverless = require('serverless-http');
 const express = require('express');
 const bodyParser = require('body-parser');
 const { WebhookClient } = require('dialogflow-fulfillment');
-const fundData = require('./fund_data.json');
+const fundData = require('../fund_data.json');
 
 const app = express();
 const router = express.Router();
