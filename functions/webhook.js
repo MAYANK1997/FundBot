@@ -8,7 +8,7 @@ const express = require('express');
      const app = express();
      app.use(bodyParser.json());
 
-     app.post('/', (req, res) => {
+     app.post('/webhook', (req, res) => {
        const agent = new WebhookClient({ request: req, response: res });
 
        function welcome(agent) {
