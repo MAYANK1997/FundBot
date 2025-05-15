@@ -3,6 +3,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const { WebhookClient } = require('dialogflow-fulfillment');
 const fundData = require('../fund_data.json');
+const portfolioDb = require('../portfolio_db');
 
 const app = express();
 const router = express.Router();
@@ -18,69 +19,160 @@ router.post('/submit', (req, res) => {
   
 
   const agent = new WebhookClient({ request: req, response: res });
-  function welcome(agent) {
-    agent.add('Welcome to FundBot! How can I assist you with your mutual fund investments today? You can ask about your account balance, fund details, purchases, redemptions, or general FAQs.');
+
+  // Extract user ID from session
+  const userId = req.body.session.split('/').pop();
+
+  async function welcome(agent) {
+    try {
+      const user = await portfolioDb.getUser(userId);
+      const userName = agent.parameters.userName || 'there';
+      const confirmAccount = agent.parameters.confirmAccount?.toLowerCase();
+
+      if (agent.getContext('awaiting_account_confirmation') && confirmAccount) {
+        if (['yes', 'sure', 'okay', 'ok'].includes(confirmAccount)) {
+          await portfolioDb.createOrUpdateUser(userId, 10000.00);
+          agent.add(`Welcome, ${userName}! Your account has been created with a $10,000 initial balance. Try saying, "Invest in Growth Fund" or "Show my investments."`);
+          agent.setContext({ name: 'welcome_greeting', lifespan: 5 });
+          return;
+        } else {
+          agent.add('Account creation cancelled. Say "Get started" to try again.');
+          return;
+        }
+      }
+
+      if (user) {
+        const portfolio = await portfolioDb.getPortfolioBalance(userId, fundData);
+        agent.add(`Welcome back, ${userName}! Your portfolio: Cash Balance: $${portfolio.cashBalance.toFixed(2)}, Total Value: $${portfolio.totalBalance.toFixed(2)}. Try "Show my investments" or "Invest in a fund."`);
+        agent.setContext({ name: 'welcome_greeting', lifespan: 5 });
+        return;
+      }
+
+      agent.add(`Hello, ${userName}! You're new here. Create an account to start investing? Say "Yes" or "Sure."`);
+      agent.setContext({ name: 'awaiting_account_confirmation', lifespan: 2 });
+    } catch (error) {
+      agent.add(`Error: ${error.message}. Try again.`);
+    }
   }
 
-  function fallback(agent) {
-    agent.add("I'm sorry, I didn't understand that. Could you please rephrase or ask about account balance, fund details, purchases, redemptions, or FAQs?");
+  async function getInvestments(agent) {
+    try {
+      const user = await portfolioDb.getUser(userId);
+      if (!user) {
+        agent.add('No account found. Say "Get started" to create one.');
+        return;
+      }
+      if (user.investments.length === 0) {
+        agent.add('No investments yet. Explore our funds?');
+        return;
+      }
+      let response = 'Your investments:\n';
+      for (const inv of user.investments) {
+        const currentNav = fundData[inv.fundName]?.nav || inv.purchaseNav;
+        const currentValue = inv.units * currentNav;
+        response += `- ${inv.fundName}: ${inv.units.toFixed(2)} units, Purchased at $${inv.purchaseNav.toFixed(2)}, Value: $${currentValue.toFixed(2)} (${inv.purchaseDate})\n`;
+      }
+      agent.add(response + 'Invest more or redeem funds?');
+    } catch (error) {
+      agent.add(`Error fetching investments: ${error.message}`);
+    }
   }
 
-  function checkBalance(agent) {
-    const balance = 15000.75; // Simulated (replace with database query)
-    agent.add(`Your current account balance is $${balance.toFixed(2)}. Would you like to explore investment options?`);
+  async function checkBalance(agent) {
+    try {
+      const user = await portfolioDb.getUser(userId);
+      if (!user) {
+        agent.add('No account found. Say "Get started" to create one.');
+        return;
+      }
+      const portfolio = await portfolioDb.getPortfolioBalance(userId, fundData);
+      agent.add(`Portfolio:\n- Cash: $${portfolio.cashBalance.toFixed(2)}\n- Investments: $${portfolio.investmentValue.toFixed(2)}\n- Total: $${portfolio.totalBalance.toFixed(2)}\nExplore investment options?`);
+    } catch (error) {
+      agent.add(`Error fetching balance: ${error.message}`);
+    }
   }
 
-  function fundDetails(agent) {
+  async function fundDetails(agent) {
     const fundName = agent.parameters.FundName;
     const fund = fundData[fundName];
     if (fund) {
-      agent.add(`Details for ${fundName}:\n- Current NAV: $${fund.nav.toFixed(2)}\n- Performance: ${fund.performance}\n- Minimum Investment: $${fund.minInvestment}\nWould you like to invest in this fund?`);
+      agent.add(`${fundName}:\n- NAV: $${fund.nav.toFixed(2)}\n- Performance: ${fund.performance}\n- Min Investment: $${fund.minInvestment}\nInvest in this fund?`);
     } else {
-      agent.add(`Sorry, I couldn't find details for ${fundName}. Please check the fund name and try again.`);
+      agent.add(`Couldn't find ${fundName}. Check the name and try again.`);
     }
   }
 
-  function purchaseFund(agent) {
+  async function purchaseFund(agent) {
     const fundName = agent.parameters.FundName;
     const amount = parseFloat(agent.parameters.amount);
     const fund = fundData[fundName];
     if (!fund) {
-      agent.add(`Sorry, I couldn't find ${fundName}. Please check the fund name and try again.`);
-    } else if (amount < fund.minInvestment) {
-      agent.add(`The minimum investment for ${fundName} is $${fund.minInvestment}. Please specify a higher amount.`);
-    } else {
-      agent.add(`Your purchase of $${amount} in ${fundName} has been processed successfully. You'll receive a confirmation soon.`);
+      agent.add(`Couldn't find ${fundName}. Check the name.`);
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      agent.add('Specify a valid positive amount.');
+      return;
+    }
+    if (amount < fund.minInvestment) {
+      agent.add(`Minimum investment for ${fundName} is $${fund.minInvestment}.`);
+      return;
+    }
+    try {
+      const user = await portfolioDb.getUser(userId);
+      if (!user) {
+        agent.add('No account found. Say "Get started" to create one.');
+        return;
+      }
+      const { units, remainingBalance } = await portfolioDb.investInFund(userId, fundName, amount, fund.nav);
+      agent.add(`Purchased ${units.toFixed(2)} units of ${fundName} for $${amount.toFixed(2)}. Cash balance: $${remainingBalance.toFixed(2)}.`);
+    } catch (error) {
+      agent.add(`Error investing: ${error.message}`);
     }
   }
 
-  function redeemFund(agent) {
+  async function redeemFund(agent) {
     const fundName = agent.parameters.FundName;
     const amount = parseFloat(agent.parameters.amount);
     const fund = fundData[fundName];
     if (!fund) {
-      agent.add(`Sorry, I couldn't find ${fundName}. Please check the fund name and try again.`);
-    } else {
-      agent.add(`Your redemption of $${amount} from ${fundName} has been processed successfully. The amount will be credited to your account soon.`);
+      agent.add(`Couldn't find ${fundName}. Check the name.`);
+      return;
+    }
+    if (isNaN(amount) || amount <= 0) {
+      agent.add('Specify a valid positive amount to redeem.');
+      return;
+    }
+    try {
+      const user = await portfolioDb.getUser(userId);
+      if (!user) {
+        agent.add('No account found. Say "Get started" to create one.');
+        return;
+      }
+      const { redeemedUnits, newBalance } = await portfolioDb.redeemFromFund(userId, fundName, amount, fund.nav);
+      agent.add(`Redeemed ${redeemedUnits.toFixed(2)} units of ${fundName} for $${amount.toFixed(2)}. Cash balance: $${newBalance.toFixed(2)}.`);
+    } catch (error) {
+      agent.add(`Error redeeming: ${error.message}`);
     }
   }
 
   function faqs(agent) {
     const query = agent.query.toLowerCase();
     if (query.includes('what are mutual funds')) {
-      agent.add('Mutual funds are investment vehicles that pool money from multiple investors to purchase a diversified portfolio of stocks, bonds, or other securities.');
+      agent.add('Mutual funds pool money from investors to buy diversified portfolios of stocks, bonds, or securities.');
     } else if (query.includes('how do i invest')) {
-      agent.add('To invest in mutual funds, you can start by selecting a fund, specifying an investment amount, and completing the purchase through our platform.');
+      agent.add('Select a fund, specify an amount, and purchase through our platform.');
     } else if (query.includes('what is nav')) {
-      agent.add('NAV (Net Asset Value) is the per-unit value of a mutual fund, calculated by dividing the total value of the fund’s assets by the number of units outstanding.');
+      agent.add('NAV is the per-unit value of a mutual fund, calculated as total assets divided by units outstanding.');
     } else {
-      agent.add('I can answer questions about mutual funds, investing, or NAV. Please ask your question again or try something specific!');
+      agent.add('Ask about mutual funds, investing, or NAV. Try again!');
     }
   }
 
   let intentMap = new Map();
   intentMap.set('Default Welcome Intent', welcome);
-  intentMap.set('Default Fallback Intent', fallback);
+  intentMap.set('Default Fallback Intent', faqs);
+  intentMap.set('Get Investments', getInvestments);
   intentMap.set('Check Balance', checkBalance);
   intentMap.set('Fund Details', fundDetails);
   intentMap.set('Purchase Fund', purchaseFund);
@@ -88,7 +180,6 @@ router.post('/submit', (req, res) => {
   intentMap.set('FAQs', faqs);
 
   agent.handleRequest(intentMap);
-
 
   
 });

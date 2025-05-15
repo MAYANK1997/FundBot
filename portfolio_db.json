@@ -1,0 +1,27 @@
+{
+    "users": [
+      {
+        "userId": "test-session-123",
+        "balance": 15000.75,
+        "investments": [
+          {
+            "fundName": "Growth Fund",
+            "units": 100,
+            "purchaseNav": 25.50,
+            "purchaseDate": "2025-05-01"
+          },
+          {
+            "fundName": "Equity Fund",
+            "units": 50,
+            "purchaseNav": 30.75,
+            "purchaseDate": "2025-05-02"
+          }
+        ]
+      },
+      {
+        "userId": "test-session-456",
+        "balance": 5000.00,
+        "investments": []
+      }
+    ]
+  }
