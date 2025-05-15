@@ -18,19 +18,19 @@
     const form = document.getElementById('dataForm');
     const output = document.getElementById('output');
     const data = {
-      "responseId": "test-123",
-      "queryResult": {
-        "queryText": "Check my balance",
-        "action": "Check Balance",
-        "parameters": {},
-        "intent": {
-          "name": "projects/fundbot-mids/agent/intents/411e6d4d-3b18-4235-8200-1dc60545bd1e",
-          "displayName": "Check Balance"
-        }
-      },
-      "originalDetectIntentRequest": {},
-      "session": "projects/fundbot-mids/agent/sessions/test-session"
-    }; 
+  "responseId": "test-123",
+  "queryResult": {
+    "queryText": "Hi",
+    "action": "Default Welcome Intent",
+    "parameters": {},
+    "intent": {
+      "name": "projects/fundbot-mids/agent/intents/def7157c-7f73-43d4-880a-7b4c57d4a97c",
+      "displayName": "Default Welcome Intent"
+    }
+  },
+  "originalDetectIntentRequest": {},
+  "session": "projects/fundbot-123456/agent/sessions/test-session-999"
+};
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); // prevent page reload
