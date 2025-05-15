@@ -1,21 +1,33 @@
-<!-- index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Express on Netlify</title>
-</head>
-<body>
-  <h1>Express GET Request</h1>
-  <button onclick="fetchData()">Get Data</button>
-  <pre id="output"></pre>
+<script>
+  const form = document.getElementById('dataForm');
+  const list = document.getElementById('messagesList');
 
-  <script>
-    async function fetchData() {
-      const res = await fetch('/.netlify/functions/index/data');
-      const json = await res.json();
-      document.getElementById('output').textContent = JSON.stringify(json, null, 2);
-    }
-  </script>
-</body>
-</html>
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    await fetch('/.netlify/functions/index/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams(data),
+    });
+
+    form.reset();
+    loadMessages();
+  });
+
+  async function loadMessages() {
+    const res = await fetch('/.netlify/functions/index/data');
+    const messages = await res.json();
+
+    list.innerHTML = '';
+    messages.forEach(({ name, message, timestamp }) => {
+      const item = document.createElement('li');
+      item.textContent = `${name} (${new Date(timestamp).toLocaleString()}): ${message}`;
+      list.appendChild(item);
+    });
+  }
+
+  loadMessages();
+</script>
