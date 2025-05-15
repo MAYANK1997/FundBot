@@ -17,6 +17,20 @@
   <script>
     const form = document.getElementById('dataForm');
     const output = document.getElementById('output');
+    const data = {
+      "responseId": "test-123",
+      "queryResult": {
+        "queryText": "Check my balance",
+        "action": "Check Balance",
+        "parameters": {},
+        "intent": {
+          "name": "projects/your-project-id/agent/intents/check-balance-intent-id",
+          "displayName": "Check Balance"
+        }
+      },
+      "originalDetectIntentRequest": {},
+      "session": "projects/your-project-id/agent/sessions/test-session"
+    }; 
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault(); // prevent page reload
@@ -25,7 +39,7 @@
         const response = await fetch('/.netlify/functions/index/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ message: "Hello from form" })
+          body: JSON.stringify(data)
         });
 
         const result = await response.json();
