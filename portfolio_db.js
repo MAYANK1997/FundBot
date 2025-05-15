@@ -31,16 +31,26 @@ const fs = require('fs').promises;
        return db.users.find(user => user.userId === userId);
      }
 
-     async function createOrUpdateUser(userId, initialBalance = 10000.00) {
+     async function createOrUpdateUser(userId, initialBalance = 10000.00, userDetails = {}) {
        const db = await readDb();
        let user = db.users.find(user => user.userId === userId);
        if (!user) {
          user = {
            userId,
+           name: userDetails.name || '',
+           mobile: userDetails.mobile || '',
+           age: userDetails.age || 0,
+           email: userDetails.email || '',
            balance: initialBalance,
            investments: []
          };
          db.users.push(user);
+       } else {
+         // Update existing user details if provided
+         if (userDetails.name) user.name = userDetails.name;
+         if (userDetails.mobile) user.mobile = userDetails.mobile;
+         if (userDetails.age) user.age = userDetails.age;
+         if (userDetails.email) user.email = userDetails.email;
        }
        await writeDb(db);
        return user;
