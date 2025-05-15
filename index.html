@@ -1,33 +1,55 @@
-<script>
-  const form = document.getElementById('dataForm');
-  const list = document.getElementById('messagesList');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Express + Netlify Form</title>
+</head>
+<body>
+  <h1>Submit Your Message</h1>
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const formData = new FormData(form);
-    const data = Object.fromEntries(formData.entries());
+  <form id="dataForm">
+    <input type="text" name="name" placeholder="Your Name" required />
+    <br />
+    <textarea name="message" placeholder="Your Message" required></textarea>
+    <br />
+    <button type="submit">Submit</button>
+  </form>
 
-    await fetch('/.netlify/functions/index/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams(data),
+  <h2>Submitted Messages:</h2>
+  <ul id="messagesList"></ul>
+
+  <script>
+    const form = document.getElementById('dataForm');
+    const list = document.getElementById('messagesList');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const data = Object.fromEntries(formData.entries());
+
+      await fetch('/.netlify/functions/index/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(data),
+      });
+
+      form.reset();
+      loadMessages();
     });
 
-    form.reset();
+    async function loadMessages() {
+      const res = await fetch('/.netlify/functions/index/data');
+      const messages = await res.json();
+
+      list.innerHTML = '';
+      messages.forEach(({ name, message, timestamp }) => {
+        const item = document.createElement('li');
+        item.textContent = `${name} (${new Date(timestamp).toLocaleString()}): ${message}`;
+        list.appendChild(item);
+      });
+    }
+
     loadMessages();
-  });
-
-  async function loadMessages() {
-    const res = await fetch('/.netlify/functions/index/data');
-    const messages = await res.json();
-
-    list.innerHTML = '';
-    messages.forEach(({ name, message, timestamp }) => {
-      const item = document.createElement('li');
-      item.textContent = `${name} (${new Date(timestamp).toLocaleString()}): ${message}`;
-      list.appendChild(item);
-    });
-  }
-
-  loadMessages();
-</script>
+  </script>
+</body>
+</html>
