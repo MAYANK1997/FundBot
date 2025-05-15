@@ -15,6 +15,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 router.post('/submit', (req, res) => {
   const message = req.body;
   console.log('Received POST data:', message);
+  res.json({ status: 'success', received: message });
 
   const agent = new WebhookClient({ request: req, response: res });
   function welcome(agent) {
@@ -89,8 +90,7 @@ router.post('/submit', (req, res) => {
   agent.handleRequest(intentMap);
 
 
-  // Respond with the received data (or a confirmation message)
-  res.json({ status: 'success', received: message });
+  
 });
 
 // Mount router at /.netlify/functions/index
