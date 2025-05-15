@@ -2,39 +2,39 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Express + Netlify Form</title>
+  <title>Express + Netlify POST Test</title>
 </head>
 <body>
-  <h1>Submit Your Message</h1>
+
+  <h1>Send Simple POST</h1>
 
   <form id="dataForm">
-   
-    
     <button type="submit">Submit</button>
   </form>
 
-  <h2>Submitted Messages:</h2>
-  <ul id="messagesList"></ul>
+  <pre id="output"></pre>
 
   <script>
-  
-  const form = document.getElementById('dataForm');
+    const form = document.getElementById('dataForm');
+    const output = document.getElementById('output');
 
     form.addEventListener('submit', async (e) => {
-     
+      e.preventDefault(); // prevent page reload
 
-      await fetch('/.netlify/functions/index/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: "Hello"
-      });
+      try {
+        const response = await fetch('/.netlify/functions/index/submit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: "Hello from form" })
+        });
 
-     
-      
+        const result = await response.json();
+        output.textContent = JSON.stringify(result, null, 2);
+      } catch (err) {
+        output.textContent = 'Error: ' + err.message;
+      }
     });
-
-    
-    
   </script>
+
 </body>
 </html>
